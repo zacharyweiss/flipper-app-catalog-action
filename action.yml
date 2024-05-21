@@ -120,7 +120,7 @@ runs:
         echo "OLD_SHA=$OLD_SHA" >> "$GITHUB_OUTPUT"
         
         cd app
-        CHANGES=$(git log --oneline --no-merges --pretty=format:"${{ inputs.GIT_LOG_PRETTY_FORMAT }}" $OLD_SHA..${{ github.sha }} )
+        CHANGES=$(git log --no-merges --pretty=format:"${{ inputs.GIT_LOG_PRETTY_FORMAT }}" $OLD_SHA..${{ github.sha }} )
         {
           echo 'CHANGES<<EOF'
           echo $CHANGES
@@ -137,8 +137,7 @@ runs:
             commit_sha: ${{ github.sha }}
         short_description: Test application
         description: "foo"
-        changelog: |
-        $(echo $CHANGES)
+        changelog: "bar"
         screenshots:
           - screenshots/ss0.png
         EOF
