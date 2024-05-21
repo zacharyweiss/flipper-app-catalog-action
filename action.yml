@@ -125,7 +125,7 @@ runs:
         cd ..
 
         if [ ${{ inputs.DRY_RUN }} ]; then
-          cat >${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH <<EOF
+          cat >${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH <<END
           sourcecode:
             type: git
             location:
@@ -137,7 +137,7 @@ runs:
           $(echo $CHANGES | sed 's/^/  /')
           screenshots:
             - screenshots/ss0.png
-          EOF
+          END
         else
           sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
         fi
