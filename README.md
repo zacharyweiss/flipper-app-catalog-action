@@ -1,4 +1,6 @@
 # Auto-prep Flipper App Catalog updates
+Unofficial. Use with care; app catalog PRs are manually reviewed by the Flipper team, so one should avoid spamming them with spurious or frivolous PRs.
+
 First-time addition of an app to the catalog must be done manually, this simply updates an already existing app manifest with the details of the current commit, staging changes in a branch of one's fork of the `flipperdevices/flipper-application-catalog` repo. 
 
 ## Usage
