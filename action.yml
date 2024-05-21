@@ -138,7 +138,7 @@ runs:
         short_description: Test application
         description: "foo"
         changelog: |
-        $(echo $CHANGES | sed 's/^/  /')
+        $(echo $CHANGES)
         screenshots:
           - screenshots/ss0.png
         EOF
@@ -154,7 +154,7 @@ runs:
         git config user.name "${{ inputs.COMMIT_USERNAME }}"
         git config user.email "${{ inputs.COMMIT_EMAIL }}"
         git add .
-        git commit -m "Update ${{ steps.app_fam.outputs.NAME }} manifest for v${{ steps.app_fam.outputs.V_MAJOR }}.${{ steps.app_fam.output.V_MINOR }} @ ${{ github.sha }}"
+        git commit -m "Update ${{ steps.app_fam.outputs.NAME }} manifest for v${{ steps.app_fam.outputs.V_MAJOR }}.${{ steps.app_fam.outputs.V_MINOR }} @ ${{ github.sha }}"
 #        git push --force -u origin HEAD
 
     - name: Push
