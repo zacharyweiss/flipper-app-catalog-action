@@ -161,7 +161,7 @@ runs:
       if: ${{ inputs.VALIDATE_BUNDLE }}
       shell: bash
       run: >
-        python3 -m pip install -r ${{ env.CATALOG_ROOT_PATH }}/tools/requirements.txt
+        python3 -m pip install -r ${{ inputs.CATALOG_REPO }}/tools/requirements.txt
 
     - name: Setup ufbt
       if: ${{ inputs.VALIDATE_BUNDLE }}
