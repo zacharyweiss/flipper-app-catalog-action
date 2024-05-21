@@ -35,6 +35,15 @@ inputs:
     default: false
 outputs:
 
+env:
+  CATALOG_REPO: ${{ inputs.CATALOG_REPO }}
+  CATALOG_FORK_OWNER: ${{ inputs.CATALOG_FORK_OWNER }}
+  CATALOG_UPSTREAM_OWNER: ${{ inputs.CATALOG_UPSTREAM_OWNER }}
+  COMMIT_USERNAME: ${{ inputs.COMMIT_USERNAME }}
+  COMMIT_EMAIL: ${{ inputs.COMMIT_EMAIL }}
+  GIT_LOG_PRETTY_FORMAT: ${{ inputs.GIT_LOG_PRETTY_FORMAT }}
+  DRY_RUN: ${{ inputs.DRY_RUN }}
+
 runs:
   using: "composite"
   steps:
@@ -73,7 +82,7 @@ runs:
     run: |
       cd $CATALOG_REPO
       git checkout -b "$BRANCH_NAME"
-      git remote add upstream "https://x-access-token:${{ secrets.CATALOG_UPDATE_TOKEN }}@github.com/$CATALOG_UPSTREAM_OWNER/$CATALOG_REPO.git"        
+      git remote add upstream "https://x-access-token:${{ inputs.CATALOG_UPDATE_TOKEN }}@github.com/$CATALOG_UPSTREAM_OWNER/$CATALOG_REPO.git"        
       git fetch upstream main
       git remote -v
       git rebase --autosquash --autostash "upstream/main"
@@ -128,7 +137,7 @@ runs:
   - name: Push
     uses: ad-m/github-push-action@master
     with:
-      github_token: ${{ secrets.CATALOG_UPDATE_TOKEN }}
+      github_token: ${{ inputs.CATALOG_UPDATE_TOKEN }}
       directory: ${{ env.CATALOG_REPO }}
       branch: ${{ env.BRANCH_NAME }}
       repository: ${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}
