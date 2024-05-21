@@ -125,19 +125,19 @@ runs:
         cd ..
 
         if [ ${{ inputs.DRY_RUN }} ]; then
-          cat >${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH <<END
-          sourcecode:
-            type: git
-            location:
-              origin: https://github.com/${{ github.repository }}.git
-              commit_sha: ${{ github.sha }}
-          short_description: Test application
-          description: "foo"
-          changelog: |
-          $(echo $CHANGES | sed 's/^/  /')
-          screenshots:
-            - screenshots/ss0.png
-          END
+          cat >${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH <<EOF
+        sourcecode:
+          type: git
+          location:
+            origin: https://github.com/${{ github.repository }}.git
+            commit_sha: ${{ github.sha }}
+        short_description: Test application
+        description: "foo"
+        changelog: |
+        $(echo $CHANGES | sed 's/^/  /')
+        screenshots:
+          - screenshots/ss0.png
+        EOF
         else
           sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
         fi
