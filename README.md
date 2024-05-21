@@ -1,1 +1,1 @@
-# Automatically prep Flipper App Catalog updates
+# Auto-prep Flipper App Catalog updates
