@@ -140,8 +140,8 @@ runs:
           EOF
         else
           sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
-#          sed -n '/changelog: /,/[^ \t]/changelog: \|\n  $(echo $CHANGES | sed 's/^/  /')/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
         fi
+#          sed -n '/changelog: /,/[^ \t]/changelog: \|\n  $(echo $CHANGES | sed 's/^/  /')/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
 
     - name: Commit
       shell: bash
