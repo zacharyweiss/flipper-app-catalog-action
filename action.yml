@@ -1,5 +1,8 @@
 name: Update Flipper Application Catalog
 description: "Stages PR branch for App Catalog update in owner's fork"
+branding:
+  icon: 'book'
+  color: 'green'
 inputs:
   CATALOG_UPDATE_TOKEN: 
     description: 'Repo-scoped Personal Access Token'
