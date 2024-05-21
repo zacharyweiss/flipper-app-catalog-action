@@ -82,7 +82,7 @@ runs:
       id: update_manifest
       shell: bash
       run: |
-        MANIFEST_PATH=applications/${{ steps.app_fam.output.FAP_CATEGORY }}/${{ steps.app_fam.output.APPID }}/manifest.yml
+        MANIFEST_PATH=applications/${{ steps.app_fam.outputs.FAP_CATEGORY }}/${{ steps.app_fam.outputs.APPID }}/manifest.yml
         echo "MANIFEST_PATH=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
         
         if [ $DRY_RUN = true ]; then
@@ -125,7 +125,7 @@ runs:
         git config user.name "${{ inputs.COMMIT_USERNAME }}"
         git config user.email "${{ inputs.COMMIT_EMAIL }}"
         git add .
-        git commit -m "Update ${{ steps.app_fam.output.NAME }} manifest for v${{ steps.app_fam.output.V_MAJOR }}.${{ steps.app_fam.output.V_MINOR }} @ ${{ github.sha }}"
+        git commit -m "Update ${{ steps.app_fam.outputs.NAME }} manifest for v${{ steps.app_fam.outputs.V_MAJOR }}.${{ steps.app_fam.output.V_MINOR }} @ ${{ github.sha }}"
 #        git push --force -u origin HEAD
 
     - name: Push
@@ -133,7 +133,7 @@ runs:
       with:
         github_token: ${{ inputs.CATALOG_UPDATE_TOKEN }}
         directory: ${{ inputs.CATALOG_REPO }}
-        branch: ${{ steps.app_fam.output.BRANCH_NAME }}
+        branch: ${{ steps.app_fam.outputs.BRANCH_NAME }}
         repository: ${{ inputs.CATALOG_FORK_OWNER }}/${{ inputs.CATALOG_REPO }}
         force: true
 
@@ -150,4 +150,4 @@ runs:
         cd ${{ inputs.CATALOG_REPO }}
         pip install -r tools/requirements.txt
         ufbt update
-        python3 tools/bundle.py --nolint ${{ steps.update_manifest.output.MANIFEST_PATH }} bundle.zip
+        python3 tools/bundle.py --nolint ${{ steps.update_manifest.outputs.MANIFEST_PATH }} bundle.zip
