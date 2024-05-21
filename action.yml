@@ -1,0 +1,149 @@
+name: Update Flipper Application Catalog
+description: 'Stages PR branch for App Catalog update in owner's fork'
+
+inputs:
+  CATALOG_UPDATE_TOKEN: 
+    description: 'Repo-scoped Personal Access Token'
+    required: true
+  CATALOG_REPO: 
+    description: 'Name of App Catalog repo'
+    required: false
+    default: flipper-application-catalog
+  CATALOG_FORK_OWNER: 
+    description: 'Owner of App Catalog fork, in which to stage PR branch'
+    required: false
+    default: ${{ github.repository_owner }}
+  CATALOG_UPSTREAM_OWNER: 
+    description: 'Owner of upstream App Catalog, to which PRs are opened'
+    required: false
+    default: flipperdevices
+  COMMIT_USERNAME: 
+    description: 'Name to use for automated commits'
+    required: false
+    default: ${{ github.actor }}
+  COMMIT_EMAIL: 
+    description: 'Email to use for automated commits'
+    required: false
+    default: ${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com
+  GIT_LOG_PRETTY_FORMAT: 
+    description: 'Format for git log pretty-printing; result is used as manifest.yml changelog'
+    required: false
+    default: "%as %h (%an) %s"
+  DRY_RUN:
+    description: 'For action testing purposes only; fills example data in manifest.yml for apps not yet in the catalog, instead of updating a preexisting manifest'
+    required: false
+    default: false
+outputs:
+
+runs:
+  using: "composite"
+  steps:
+  - name: Checkout app repo `${{ github.repository }}`
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+      path: app
+      
+  - name: Get application.fam details
+    run: |
+      cd app
+      NAME=$(grep -oP '(?<=name=\").*(?=\")' application.fam)
+      APPID=$(grep -oP '(?<=appid=\").*(?=\")' application.fam)
+      FAP_CATEGORY=$(grep -oP '(?<=fap_category=\").*(?=\")' application.fam)
+      FAP_VERSION=$(grep -oP '(?<=fap_version=\()\d+, \d+(?=\))' application.fam)
+
+      V_MAJOR=$(echo $FAP_VERSION | cut -d "," -f 1 | xargs)
+      V_MINOR=$(echo $FAP_VERSION | cut -d "," -f 2 | xargs)
+      
+      echo "V_MAJOR=$V_MAJOR" >> "$GITHUB_ENV"
+      echo "V_MINOR=$V_MINOR" >> "$GITHUB_ENV"
+      echo "NAME=$(echo $NAME | sed -e 's/\[.*\]//' | xargs)" >> "$GITHUB_ENV"
+      echo "APPID=$APPID" >> "$GITHUB_ENV"
+      echo "FAP_CATEGORY=$FAP_CATEGORY" >> "$GITHUB_ENV"
+      echo "BRANCH_NAME=${CATALOG_FORK_OWNER}/${APPID}_${V_MAJOR}.${V_MINOR}" >> "$GITHUB_ENV"
+      
+  - name: Checkout catalog fork `${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}`
+    uses: actions/checkout@v4
+    with:
+      repository: ${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}
+      path: ${{ env.CATALOG_REPO }}
+      token: ${{ secrets.CATALOG_UPDATE_TOKEN }}
+      
+  - name: Create branch `${{ env.BRANCH_NAME }}`
+    run: |
+      cd $CATALOG_REPO
+      git checkout -b "$BRANCH_NAME"
+      git remote add upstream "https://x-access-token:${{ secrets.CATALOG_UPDATE_TOKEN }}@github.com/$CATALOG_UPSTREAM_OWNER/$CATALOG_REPO.git"        
+      git fetch upstream main
+      git remote -v
+      git rebase --autosquash --autostash "upstream/main"
+
+  - name: Update manifest.yml `commit_sha` and `changelog`
+    run: |
+      MANIFEST_PATH=applications/$FAP_CATEGORY/$APPID/manifest.yml
+      echo "MANIFEST_PATH=$MANIFEST_PATH" >> "$GITHUB_ENV"
+      
+      if [ $DRY_RUN = true ]; then
+        mkdir -p $CATALOG_REPO/$(dirname $MANIFEST_PATH)
+        touch $CATALOG_REPO/$MANIFEST_PATH
+        OLD_SHA=9b27c27b306dc46ea342f3aa32e42ab3f5eaf510
+      else
+        OLD_SHA=$(grep -oP '(?<=commit_sha: )[a-zA-Z0-9]+' $CATALOG_REPO/$MANIFEST_PATH)
+      fi
+      echo "OLD_SHA=$OLD_SHA" >> "$GITHUB_ENV"
+      
+      cd app
+      CHANGES=$(git log --oneline --no-merges --pretty=format:"$GIT_LOG_PRETTY_FORMAT" $OLD_SHA..${{ github.sha }} )
+      echo "CHANGES=$CHANGES" >> "$GITHUB_ENV"
+      cd ..
+
+      if [ $DRY_RUN = true ]; then
+        cat >$CATALOG_REPO/$MANIFEST_PATH <<EOF
+        sourcecode:
+          type: git
+          location:
+            origin: https://github.com/${{ github.repository }}.git
+            commit_sha: ${{ github.sha }}
+        short_description: Test application
+        description: "foo"
+        changelog: |
+        $(echo $CHANGES | sed 's/^/  /')
+        screenshots:
+          - screenshots/ss0.png
+        EOF
+      else
+        sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' $CATALOG_REPO/$MANIFEST_PATH
+        sed -n '/changelog: /,/[^ \t]/changelog: \|\n  $(echo $CHANGES | sed 's/^/  /')/' $CATALOG_REPO/$MANIFEST_PATH
+      fi
+
+  - name: Commit
+    run: |
+      cd $CATALOG_REPO
+      git config user.name "${COMMIT_USERNAME}"
+      git config user.email "${COMMIT_EMAIL}"
+      git add .
+      git commit -m "Update ${NAME} manifest for v${V_MAJOR}.${V_MINOR} @ ${{ github.sha }}"
+#        git push --force -u origin HEAD
+
+  - name: Push
+    uses: ad-m/github-push-action@master
+    with:
+      github_token: ${{ secrets.CATALOG_UPDATE_TOKEN }}
+      directory: ${{ env.CATALOG_REPO }}
+      branch: ${{ env.BRANCH_NAME }}
+      repository: ${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}
+      force: true
+
+    # TODO: borrow bundle action from https://github.com/flipperdevices/flipper-application-catalog/blob/main/.github/actions/bundle/action.yml
+  - name: Set up Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: '3.9'
+      cache: 'pip' # caching pip dependencies
+
+  - name: Setup dependencies & toolchain; validate bundle
+    run: |
+      cd $CATALOG_REPO
+      pip install -r tools/requirements.txt
+      ufbt update
+      python3 tools/bundle.py --nolint $MANIFEST_PATH bundle.zip

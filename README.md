@@ -1,1 +1,1 @@
-# flipper-app-catalog-action
+# Automatically prep Flipper App Catalog updates
