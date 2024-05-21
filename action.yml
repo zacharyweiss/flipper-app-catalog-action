@@ -1,6 +1,5 @@
 name: Update Flipper Application Catalog
 description: 'Stages PR branch for App Catalog update in owner's fork'
-
 inputs:
   CATALOG_UPDATE_TOKEN: 
     description: 'Repo-scoped Personal Access Token'
@@ -33,7 +32,6 @@ inputs:
     description: 'For action testing purposes only; fills example data in manifest.yml for apps not yet in the catalog, instead of updating a preexisting manifest'
     required: false
     default: false
-
 runs:
   using: "composite"
   steps:
