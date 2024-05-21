@@ -121,7 +121,11 @@ runs:
         
         cd app
         CHANGES=$(git log --oneline --no-merges --pretty=format:"${{ inputs.GIT_LOG_PRETTY_FORMAT }}" $OLD_SHA..${{ github.sha }} )
-        echo "CHANGES=$CHANGES" >> "$GITHUB_OUTPUT"
+        {
+          echo 'CHANGES<<EOF'
+          echo $CHANGES
+          echo EOF
+        } >> "$GITHUB_OUTPUT"
         cd ..
 
         if [ ${{ inputs.DRY_RUN }} ]; then
