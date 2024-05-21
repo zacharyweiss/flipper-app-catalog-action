@@ -36,15 +36,6 @@ inputs:
 
 runs:
   using: "composite"
-  env:
-    CATALOG_REPO: ${{ inputs.CATALOG_REPO }}
-    CATALOG_FORK_OWNER: ${{ inputs.CATALOG_FORK_OWNER }}
-    CATALOG_UPSTREAM_OWNER: ${{ inputs.CATALOG_UPSTREAM_OWNER }}
-    COMMIT_USERNAME: ${{ inputs.COMMIT_USERNAME }}
-    COMMIT_EMAIL: ${{ inputs.COMMIT_EMAIL }}
-    GIT_LOG_PRETTY_FORMAT: ${{ inputs.GIT_LOG_PRETTY_FORMAT }}
-    DRY_RUN: ${{ inputs.DRY_RUN }}
-
   steps:
   - name: Checkout app repo `${{ github.repository }}`
     uses: actions/checkout@v4
@@ -53,6 +44,7 @@ runs:
       path: app
       
   - name: Get application.fam details
+    id: app_fam
     shell: bash
     run: |
       cd app
@@ -64,52 +56,53 @@ runs:
       V_MAJOR=$(echo $FAP_VERSION | cut -d "," -f 1 | xargs)
       V_MINOR=$(echo $FAP_VERSION | cut -d "," -f 2 | xargs)
       
-      echo "V_MAJOR=$V_MAJOR" >> "$GITHUB_ENV"
-      echo "V_MINOR=$V_MINOR" >> "$GITHUB_ENV"
-      echo "NAME=$(echo $NAME | sed -e 's/\[.*\]//' | xargs)" >> "$GITHUB_ENV"
-      echo "APPID=$APPID" >> "$GITHUB_ENV"
-      echo "FAP_CATEGORY=$FAP_CATEGORY" >> "$GITHUB_ENV"
-      echo "BRANCH_NAME=${CATALOG_FORK_OWNER}/${APPID}_${V_MAJOR}.${V_MINOR}" >> "$GITHUB_ENV"
+      echo "V_MAJOR=$V_MAJOR" >> "$GITHUB_OUTPUT"
+      echo "V_MINOR=$V_MINOR" >> "$GITHUB_OUTPUT"
+      echo "NAME=$(echo $NAME | sed -e 's/\[.*\]//' | xargs)" >> "$GITHUB_OUTPUT"
+      echo "APPID=$APPID" >> "$GITHUB_OUTPUT"
+      echo "FAP_CATEGORY=$FAP_CATEGORY" >> "$GITHUB_OUTPUT"
+      echo "BRANCH_NAME=${{ inputs.CATALOG_FORK_OWNER }}/${APPID}_${V_MAJOR}.${V_MINOR}" >> "$GITHUB_OUTPUT"
       
-  - name: Checkout catalog fork `${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}`
+  - name: Checkout catalog fork `${{ inputs.CATALOG_FORK_OWNER }}/${{ inputs.CATALOG_REPO }}`
     uses: actions/checkout@v4
     with:
-      repository: ${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}
-      path: ${{ env.CATALOG_REPO }}
-      token: ${{ secrets.CATALOG_UPDATE_TOKEN }}
+      repository: ${{ inputs.CATALOG_FORK_OWNER }}/${{ inputs.CATALOG_REPO }}
+      path: ${{ inputs.CATALOG_REPO }}
+      token: ${{ inputs.CATALOG_UPDATE_TOKEN }}
       
-  - name: Create branch `${{ env.BRANCH_NAME }}`
+  - name: Create branch `${{ steps.app_fam.outputs.BRANCH_NAME }}`
     shell: bash
     run: |
-      cd $CATALOG_REPO
-      git checkout -b "$BRANCH_NAME"
-      git remote add upstream "https://x-access-token:${{ inputs.CATALOG_UPDATE_TOKEN }}@github.com/$CATALOG_UPSTREAM_OWNER/$CATALOG_REPO.git"        
+      cd ${{ inputs.CATALOG_REPO }}
+      git checkout -b "${{ steps.app_fam.outputs.BRANCH_NAME }}"
+      git remote add upstream "https://x-access-token:${{ inputs.CATALOG_UPDATE_TOKEN }}@github.com/${{ inputs.CATALOG_UPSTREAM_OWNER }}/${{ inputs.CATALOG_REPO }}.git"        
       git fetch upstream main
       git remote -v
       git rebase --autosquash --autostash "upstream/main"
 
   - name: Update manifest.yml `commit_sha` and `changelog`
+    id: update_manifest
     shell: bash
     run: |
-      MANIFEST_PATH=applications/$FAP_CATEGORY/$APPID/manifest.yml
-      echo "MANIFEST_PATH=$MANIFEST_PATH" >> "$GITHUB_ENV"
+      MANIFEST_PATH=applications/${{ steps.app_fam.output.FAP_CATEGORY }}/${{ steps.app_fam.output.APPID }}/manifest.yml
+      echo "MANIFEST_PATH=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
       
       if [ $DRY_RUN = true ]; then
-        mkdir -p $CATALOG_REPO/$(dirname $MANIFEST_PATH)
-        touch $CATALOG_REPO/$MANIFEST_PATH
+        mkdir -p ${{ inputs.CATALOG_REPO }}/$(dirname $MANIFEST_PATH)
+        touch ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
         OLD_SHA=9b27c27b306dc46ea342f3aa32e42ab3f5eaf510
       else
-        OLD_SHA=$(grep -oP '(?<=commit_sha: )[a-zA-Z0-9]+' $CATALOG_REPO/$MANIFEST_PATH)
+        OLD_SHA=$(grep -oP '(?<=commit_sha: )[a-zA-Z0-9]+' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH)
       fi
-      echo "OLD_SHA=$OLD_SHA" >> "$GITHUB_ENV"
+      echo "OLD_SHA=$OLD_SHA" >> "$GITHUB_OUTPUT"
       
       cd app
-      CHANGES=$(git log --oneline --no-merges --pretty=format:"$GIT_LOG_PRETTY_FORMAT" $OLD_SHA..${{ github.sha }} )
-      echo "CHANGES=$CHANGES" >> "$GITHUB_ENV"
+      CHANGES=$(git log --oneline --no-merges --pretty=format:"${{ inputs.GIT_LOG_PRETTY_FORMAT }}" $OLD_SHA..${{ github.sha }} )
+      echo "CHANGES=$CHANGES" >> "$GITHUB_OUTPUT"
       cd ..
 
       if [ $DRY_RUN = true ]; then
-        cat >$CATALOG_REPO/$MANIFEST_PATH <<EOF
+        cat >${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH <<EOF
         sourcecode:
           type: git
           location:
@@ -123,27 +116,27 @@ runs:
           - screenshots/ss0.png
         EOF
       else
-        sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' $CATALOG_REPO/$MANIFEST_PATH
-        sed -n '/changelog: /,/[^ \t]/changelog: \|\n  $(echo $CHANGES | sed 's/^/  /')/' $CATALOG_REPO/$MANIFEST_PATH
+        sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
+        sed -n '/changelog: /,/[^ \t]/changelog: \|\n  $(echo $CHANGES | sed 's/^/  /')/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
       fi
 
   - name: Commit
     shell: bash
     run: |
-      cd $CATALOG_REPO
-      git config user.name "${COMMIT_USERNAME}"
-      git config user.email "${COMMIT_EMAIL}"
+      cd ${{ inputs.CATALOG_REPO }}
+      git config user.name "${{ inputs.COMMIT_USERNAME }}"
+      git config user.email "${{ inputs.COMMIT_EMAIL }}"
       git add .
-      git commit -m "Update ${NAME} manifest for v${V_MAJOR}.${V_MINOR} @ ${{ github.sha }}"
+      git commit -m "Update ${{ steps.app_fam.output.NAME }} manifest for v${{ steps.app_fam.output.V_MAJOR }}.${{ steps.app_fam.output.V_MINOR }} @ ${{ github.sha }}"
 #        git push --force -u origin HEAD
 
   - name: Push
     uses: ad-m/github-push-action@master
     with:
       github_token: ${{ inputs.CATALOG_UPDATE_TOKEN }}
-      directory: ${{ env.CATALOG_REPO }}
-      branch: ${{ env.BRANCH_NAME }}
-      repository: ${{ env.CATALOG_FORK_OWNER }}/${{ env.CATALOG_REPO }}
+      directory: ${{ inputs.CATALOG_REPO }}
+      branch: ${{ steps.app_fam.output.BRANCH_NAME }}
+      repository: ${{ inputs.CATALOG_FORK_OWNER }}/${{ inputs.CATALOG_REPO }}
       force: true
 
     # TODO: borrow bundle action from https://github.com/flipperdevices/flipper-application-catalog/blob/main/.github/actions/bundle/action.yml
@@ -156,7 +149,7 @@ runs:
   - name: Setup dependencies & toolchain; validate bundle
     shell: bash
     run: |
-      cd $CATALOG_REPO
+      cd ${{ inputs.CATALOG_REPO }}
       pip install -r tools/requirements.txt
       ufbt update
-      python3 tools/bundle.py --nolint $MANIFEST_PATH bundle.zip
+      python3 tools/bundle.py --nolint ${{ steps.update_manifest.output.MANIFEST_PATH }} bundle.zip
