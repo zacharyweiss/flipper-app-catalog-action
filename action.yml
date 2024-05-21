@@ -32,6 +32,10 @@ inputs:
     description: 'For action testing purposes only; fills example data in manifest.yml for apps not yet in the catalog, instead of updating a preexisting manifest'
     required: false
     default: false
+  VALIDATE_BUNDLE:
+    description: 'Run bundle validation before pushing branch'
+    required: false
+    default: true
 outputs:
   V_MAJOR:
     description: 'FAP version major'
@@ -145,6 +149,37 @@ runs:
           sed -i 's/commit_sha: .*/commit_sha: ${{ github.sha }}/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
         fi
 #          sed -n '/changelog: /,/[^ \t]/changelog: \|\n  $(echo $CHANGES | sed 's/^/  /')/' ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
+
+    - name: Setup Python
+      if: ${{ inputs.VALIDATE_BUNDLE }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Setup Python requirements
+      if: ${{ inputs.VALIDATE_BUNDLE }}
+      shell: bash
+      run: >
+        python3 -m pip install -r ${{ env.CATALOG_ROOT_PATH }}/tools/requirements.txt
+
+    - name: Setup ufbt
+      if: ${{ inputs.VALIDATE_BUNDLE }}
+      uses: flipperdevices/flipperzero-ufbt-action@v0.1
+      id: setup-ufbt
+      with:
+        task: setup
+        skip-setup: true
+        sdk-channel: release
+
+    - name: Validate bundle
+      if: ${{ inputs.VALIDATE_BUNDLE }}
+      shell: bash
+      run: |
+        python3 ${{ inputs.CATALOG_REPO }}/tools/bundle.py \
+          --nolint \
+          ${{ inputs.CATALOG_REPO }}/${{ steps.update_manifest.outputs.MANIFEST_PATH }} \
+          bundle.zip
 
     - name: Commit
       shell: bash
