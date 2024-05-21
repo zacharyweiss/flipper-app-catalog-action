@@ -33,19 +33,18 @@ inputs:
     description: 'For action testing purposes only; fills example data in manifest.yml for apps not yet in the catalog, instead of updating a preexisting manifest'
     required: false
     default: false
-outputs:
-
-env:
-  CATALOG_REPO: ${{ inputs.CATALOG_REPO }}
-  CATALOG_FORK_OWNER: ${{ inputs.CATALOG_FORK_OWNER }}
-  CATALOG_UPSTREAM_OWNER: ${{ inputs.CATALOG_UPSTREAM_OWNER }}
-  COMMIT_USERNAME: ${{ inputs.COMMIT_USERNAME }}
-  COMMIT_EMAIL: ${{ inputs.COMMIT_EMAIL }}
-  GIT_LOG_PRETTY_FORMAT: ${{ inputs.GIT_LOG_PRETTY_FORMAT }}
-  DRY_RUN: ${{ inputs.DRY_RUN }}
 
 runs:
   using: "composite"
+  env:
+    CATALOG_REPO: ${{ inputs.CATALOG_REPO }}
+    CATALOG_FORK_OWNER: ${{ inputs.CATALOG_FORK_OWNER }}
+    CATALOG_UPSTREAM_OWNER: ${{ inputs.CATALOG_UPSTREAM_OWNER }}
+    COMMIT_USERNAME: ${{ inputs.COMMIT_USERNAME }}
+    COMMIT_EMAIL: ${{ inputs.COMMIT_EMAIL }}
+    GIT_LOG_PRETTY_FORMAT: ${{ inputs.GIT_LOG_PRETTY_FORMAT }}
+    DRY_RUN: ${{ inputs.DRY_RUN }}
+
   steps:
   - name: Checkout app repo `${{ github.repository }}`
     uses: actions/checkout@v4
@@ -54,6 +53,7 @@ runs:
       path: app
       
   - name: Get application.fam details
+    shell: bash
     run: |
       cd app
       NAME=$(grep -oP '(?<=name=\").*(?=\")' application.fam)
@@ -79,6 +79,7 @@ runs:
       token: ${{ secrets.CATALOG_UPDATE_TOKEN }}
       
   - name: Create branch `${{ env.BRANCH_NAME }}`
+    shell: bash
     run: |
       cd $CATALOG_REPO
       git checkout -b "$BRANCH_NAME"
@@ -88,6 +89,7 @@ runs:
       git rebase --autosquash --autostash "upstream/main"
 
   - name: Update manifest.yml `commit_sha` and `changelog`
+    shell: bash
     run: |
       MANIFEST_PATH=applications/$FAP_CATEGORY/$APPID/manifest.yml
       echo "MANIFEST_PATH=$MANIFEST_PATH" >> "$GITHUB_ENV"
@@ -126,6 +128,7 @@ runs:
       fi
 
   - name: Commit
+    shell: bash
     run: |
       cd $CATALOG_REPO
       git config user.name "${COMMIT_USERNAME}"
@@ -151,6 +154,7 @@ runs:
       cache: 'pip' # caching pip dependencies
 
   - name: Setup dependencies & toolchain; validate bundle
+    shell: bash
     run: |
       cd $CATALOG_REPO
       pip install -r tools/requirements.txt
