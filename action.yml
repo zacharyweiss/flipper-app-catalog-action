@@ -85,7 +85,7 @@ runs:
         MANIFEST_PATH=applications/${{ steps.app_fam.outputs.FAP_CATEGORY }}/${{ steps.app_fam.outputs.APPID }}/manifest.yml
         echo "MANIFEST_PATH=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
         
-        if [ $DRY_RUN = true ]; then
+        if [ ${{ inputs.DRY_RUN }} ]; then
           mkdir -p ${{ inputs.CATALOG_REPO }}/$(dirname $MANIFEST_PATH)
           touch ${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH
           OLD_SHA=9b27c27b306dc46ea342f3aa32e42ab3f5eaf510
@@ -99,7 +99,7 @@ runs:
         echo "CHANGES=$CHANGES" >> "$GITHUB_OUTPUT"
         cd ..
 
-        if [ $DRY_RUN = true ]; then
+        if [ ${{ inputs.DRY_RUN }} ]; then
           cat >${{ inputs.CATALOG_REPO }}/$MANIFEST_PATH <<EOF
           sourcecode:
             type: git
