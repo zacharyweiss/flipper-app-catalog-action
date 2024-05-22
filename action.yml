@@ -130,7 +130,7 @@ runs:
         CHANGES=$(git log --no-merges --pretty=format:"${{ inputs.GIT_LOG_PRETTY_FORMAT }}" $OLD_SHA..${{ github.sha }} )
         {
           echo 'CHANGES<<EOF'
-          echo $CHANGES
+          echo "$CHANGES"
           echo EOF
         } >> "$GITHUB_OUTPUT"
         cd ..
