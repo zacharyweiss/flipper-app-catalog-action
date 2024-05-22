@@ -21,12 +21,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: zacharyweiss/flipper-app-catalog-action@v1.0
+      - uses: zacharyweiss/flipper-app-catalog-action@v1.1
         id: update_manifest
         with:
           CATALOG_UPDATE_TOKEN: ${{ secrets.CATALOG_UPDATE_TOKEN }}
 
-    # Auto-PR logic here, or manually initiate PR from branch created in your App Catalog fork.
+    # Auto-PR logic here, or manually initiate PR from the branch created in your App Catalog fork.
 ```
 Usage example can be found in the [MagSpoof GH workflow](https://github.com/zacharyweiss/magspoof_flipper/blob/main/.github/workflows/app_catalog_upd.yml).
 
